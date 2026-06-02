@@ -20,7 +20,7 @@ const {
     fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 
-const sessionDir = process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
+const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 router.get('/session', async (req, res) => {
     const id = giftedId();
@@ -31,7 +31,7 @@ router.get('/session', async (req, res) => {
 
     async function cleanUpSession() {
         if (!sessionCleanedUp) {
-            await removeFile(path.join(sessionDir, id));
+            try { await removeFile(path.join(getSessionDir(), id)); } catch (_) {}
             sessionCleanedUp = true;
         }
     }
@@ -39,7 +39,7 @@ router.get('/session', async (req, res) => {
     async function GIFTED_QR_CODE() {
         const { version } = await fetchLatestBaileysVersion();
         console.log(version);
-        const { state, saveCreds } = await useMultiFileAuthState(path.join(sessionDir, id));
+        const { state, saveCreds } = await useMultiFileAuthState(path.join(getSessionDir(), id));
         try {
             let Gifted = giftedConnect({
                 version,

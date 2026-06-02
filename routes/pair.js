@@ -20,15 +20,16 @@ const {
     Browsers
 } = require("@whiskeysockets/baileys");
 
-const sessionDir = process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
+const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 // Cleanup stale session dirs older than 10 minutes on startup
 try {
-    if (fs.existsSync(sessionDir)) {
+    const sDir = getSessionDir();
+    if (fs.existsSync(sDir)) {
         const cutoff = Date.now() - 10 * 60 * 1000;
-        for (const entry of fs.readdirSync(sessionDir)) {
+        for (const entry of fs.readdirSync(sDir)) {
             try {
-                const p = path.join(sessionDir, entry);
+                const p = path.join(sDir, entry);
                 if (fs.statSync(p).isDirectory() && fs.statSync(p).mtimeMs < cutoff) {
                     fs.rmSync(p, { recursive: true, force: true });
                 }
@@ -51,14 +52,14 @@ router.get('/', async (req, res) => {
     async function cleanUpSession() {
         if (!sessionCleanedUp) {
             sessionCleanedUp = true;
-            try { await removeFile(path.join(sessionDir, id)); } catch (_) {}
+            try { await removeFile(path.join(getSessionDir(), id)); } catch (_) {}
         }
     }
 
     async function GIFTED_PAIR_CODE() {
         const { version } = await fetchLatestBaileysVersion();
         console.log(`[pair:${id}] version:`, version, '| registered:', false);
-        const { state, saveCreds } = await useMultiFileAuthState(path.join(sessionDir, id));
+        const { state, saveCreds } = await useMultiFileAuthState(path.join(getSessionDir(), id));
 
         let Gifted;
         try {
