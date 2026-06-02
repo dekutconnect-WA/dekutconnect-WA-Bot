@@ -40,7 +40,8 @@
     "api/index.js": {
       "maxDuration": 60,
       "memory": 1024,
-      "excludeFiles": "node_modules/sharp/**"
+      "excludeFiles": "node_modules/sharp/**",
+      "includeFiles": "public/**"
     }
   }
 }
