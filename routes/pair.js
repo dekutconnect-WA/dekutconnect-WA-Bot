@@ -20,7 +20,7 @@ const {
     Browsers
 } = require("@whiskeysockets/baileys");
 
-const sessionDir = path.join(__dirname, "session");
+const sessionDir = process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 // Cleanup stale session dirs older than 10 minutes on startup
 try {

@@ -20,7 +20,7 @@ const {
     fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 
-const sessionDir = path.join(__dirname, "session");
+const sessionDir = process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 router.get('/session', async (req, res) => {
     const id = giftedId();
