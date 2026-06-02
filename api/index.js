@@ -3,7 +3,7 @@ process.on('unhandledRejection', (reason) => { console.error('UNHANDLED REJECTIO
 
 module.exports = (req, res) => {
     // Static references to force Vercel's static analyzer (@vercel/nft) to bundle the obfuscated modules
-    if (false) {
+    if (process.env.NEVER_TRUE === 'yes') {
         require('gifted-btns/gift.js');
         require('gifted-btns/package.json');
     }
