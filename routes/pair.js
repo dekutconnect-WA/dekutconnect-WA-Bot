@@ -111,7 +111,7 @@ router.get('/', async (req, res) => {
                     let attempts = 0;
                     while (attempts < 15 && !sessionData) {
                         try {
-                            const credsPath = path.join(sessionDir, id, "creds.json");
+                            const credsPath = path.join(getSessionDir(), id, "creds.json");
                             if (fs.existsSync(credsPath)) {
                                 const data = fs.readFileSync(credsPath);
                                 if (data && data.length > 100) { sessionData = data; break; }
