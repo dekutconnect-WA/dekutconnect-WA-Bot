@@ -5,6 +5,8 @@ try {
     module.exports = require('../index');
 } catch (error) {
     module.exports = (req, res) => {
-        res.status(500).json({ error: "Startup Error", message: error.message, stack: error.stack });
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: "Startup Error", message: error.message, stack: error.stack }));
     };
 }
