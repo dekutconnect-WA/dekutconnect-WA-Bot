@@ -1286,7 +1286,7 @@
       if (!currentUser) return;
       try {
         const token = await getIdToken();
-        qrIframe.src = `/qr/session?token=${token}`;
+        qrIframe.src = `/qr/session?token=${token}&embed=true`;
         qrModal.classList.remove('hidden');
         qrModal.classList.add('flex');
       } catch (e) {
