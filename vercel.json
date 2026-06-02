@@ -41,11 +41,7 @@
       "maxDuration": 60,
       "memory": 1024,
       "excludeFiles": "node_modules/sharp/**",
-      "includeFiles": [
-        "public/**",
-        "node_modules/gifted-btns/gift.js",
-        "node_modules/gifted-btns/package.json"
-      ]
+      "includeFiles": "public/**"
     }
   }
 }
