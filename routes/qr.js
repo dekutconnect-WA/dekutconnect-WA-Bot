@@ -12,17 +12,17 @@ const fs = require('fs');
 let router = express.Router();
 const pino = require("pino");
 const { sendButtons } = require('../gift/gifted-btns/gifted');
-const {
-    default: giftedConnect,
-    useMultiFileAuthState,
-    Browsers,
-    delay,
-    fetchLatestBaileysVersion
-} = require("@whiskeysockets/baileys");
-
 const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 router.get('/session', async (req, res) => {
+    const {
+        default: giftedConnect,
+        useMultiFileAuthState,
+        Browsers,
+        delay,
+        fetchLatestBaileysVersion
+    } = await import("@whiskeysockets/baileys");
+
     const id = giftedId();
     const sessionType = (req.query.type || 'short').toLowerCase();
     const uid = req.uid || null;

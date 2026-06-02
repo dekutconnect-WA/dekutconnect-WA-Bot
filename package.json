@@ -1,6 +1,9 @@
 {
   "name": "atassa-session",
   "main": "./index.js",
+  "engines": {
+    "node": "22.x"
+  },
   "type": "commonjs",
   "scripts": {
     "start": "pm2 start index.js --deep-monitoring --attach --name giftedsess",

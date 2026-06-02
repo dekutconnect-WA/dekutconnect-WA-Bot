@@ -11,15 +11,6 @@ const path = require('path');
 let router = express.Router();
 const pino = require("pino");
 const { sendButtons } = require('../gift/gifted-btns/gifted');
-const {
-    default: giftedConnect,
-    useMultiFileAuthState,
-    delay,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    Browsers
-} = require("@whiskeysockets/baileys");
-
 const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 // Cleanup stale session dirs older than 10 minutes on startup
@@ -39,6 +30,15 @@ try {
 } catch (_) {}
 
 router.get('/', async (req, res) => {
+    const {
+        default: giftedConnect,
+        useMultiFileAuthState,
+        delay,
+        fetchLatestBaileysVersion,
+        makeCacheableSignalKeyStore,
+        Browsers
+    } = await import("@whiskeysockets/baileys");
+
     const id = giftedId();
     let num = (req.query.number || '').replace(/[^0-9]/g, '');
     const sessionType = (req.query.type || 'short').toLowerCase();
