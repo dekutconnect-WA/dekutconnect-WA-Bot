@@ -6,7 +6,7 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
-const { updateUserBotStatus, getAllActiveUserBots } = require('./userStore');
+const { updateUserBotStatus, getAllActiveUserBots, getUserBot } = require('./userStore');
 
 const BOT_ROOT = path.resolve(__dirname, '..', '..'); // dekutconnect-bot root
 const activeProcesses = new Map(); // uid -> ChildProcess
@@ -32,7 +32,7 @@ function _recordRestart(uid) {
     restartHistory.set(uid, history);
 }
 
-function startBot(uid, sessionId) {
+async function startBot(uid, sessionId) {
     if (activeProcesses.has(uid)) {
         const existing = activeProcesses.get(uid);
         if (existing && !existing.killed) {
@@ -43,11 +43,23 @@ function startBot(uid, sessionId) {
 
     console.log(`[BotManager] Starting bot for uid=${uid}`);
 
+    let autolike = 'false';
+    let autoview = 'false';
+    try {
+        const bot = await getUserBot(uid);
+        if (bot) {
+            autolike = (bot.autolike === true || bot.autolike === 'true') ? 'true' : 'false';
+            autoview = (bot.autoview === true || bot.autoview === 'true') ? 'true' : 'false';
+        }
+    } catch (_) {}
+
     const env = {
         ...process.env,
         SESSION_ID: sessionId,
         NO_SERVER: 'true',
         BOT_UID: uid,
+        AUTO_LIKE_STATUS: autolike,
+        AUTO_READ_STATUS: autoview,
         NODE_OPTIONS: `--max-old-space-size=${MAX_BOT_MEMORY_MB}`,
     };
 
@@ -115,7 +127,7 @@ async function stopBot(uid) {
 async function restartBot(uid, sessionId) {
     await stopBot(uid);
     await new Promise(r => setTimeout(r, 1500));
-    startBot(uid, sessionId);
+    await startBot(uid, sessionId);
     await updateUserBotStatus(uid, 'running').catch(() => {});
 }
 

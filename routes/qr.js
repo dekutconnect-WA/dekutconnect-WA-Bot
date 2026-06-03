@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 let router = express.Router();
 const pino = require("pino");
-const { sendButtons } = require('../gift/gifted-btns/gifted');
+const { sendButtons } = require('../gift/gifted-btns/gift');
 const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 router.get('/session', async (req, res) => {

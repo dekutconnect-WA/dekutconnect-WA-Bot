@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({
   path: path.join(__dirname, '.env'),
   quiet: true,
-  override: false,
+  override: true,
 });
 
 module.exports = {

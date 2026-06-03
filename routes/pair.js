@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 let router = express.Router();
 const pino = require("pino");
-const { sendButtons } = require('../gift/gifted-btns/gifted');
+const { sendButtons } = require('../gift/gifted-btns/gift');
 const getSessionDir = () => process.env.VERCEL ? path.join("/tmp", "session") : path.join(__dirname, "session");
 
 // Cleanup stale session dirs older than 10 minutes on startup

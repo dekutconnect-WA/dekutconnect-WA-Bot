@@ -1,47 +1,7 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "src": "/qr/(.*)", "dest": "/api/index.js" },
-    { "src": "/code", "dest": "/api/index.js" },
-    { "src": "/session/(.*)", "dest": "/api/index.js" },
-    { "src": "/health", "dest": "/api/index.js" },
-    { "src": "/(.*)", "dest": "/api/index.js" }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" },
-        { "key": "Access-Control-Max-Age", "value": "86400" }
-      ]
-    },
-    {
-      "source": "/session/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ],
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 60,
-      "memory": 1024,
-      "excludeFiles": "node_modules/sharp/**",
-      "includeFiles": "public/**"
-    }
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "http://panel.bwmxmd.co.ke:27203/$1" }
+  ]
 }

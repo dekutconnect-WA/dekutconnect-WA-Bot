@@ -1,3 +1,53 @@
+// 🔒 Network-level block: prevent any library from fetching external newsletter JIDs.
+// The obfuscated gifted-btns package makes HTTP(S) requests to files.gifted.co.ke
+// to inject foreign newsletter JIDs. We intercept at the Node.js http/https layer so
+// no module — regardless of obfuscation — can reach that endpoint.
+(function installNetworkGuard() {
+    const _https = require('https');
+    const _http  = require('http');
+
+    // Only block the specific file-hosting subdomain used for newsletter injection.
+    // Other gifted.co.ke subdomains (e.g. yts.gifted.co.ke) are intentionally allowed.
+    const BLOCKED_HOSTS = ['files.gifted.co.ke'];
+
+    function isBlocked(options) {
+        const host = (typeof options === 'string' || options instanceof URL)
+            ? (typeof options === 'string' ? new URL(options).hostname : options.hostname)
+            : (options.hostname || options.host || '');
+        return BLOCKED_HOSTS.some(b => String(host) === b || String(host).endsWith('.' + b));
+    }
+
+    function patchRequest(mod) {
+        const original = mod.request.bind(mod);
+        mod.request = function(options, cb) {
+            if (isBlocked(options)) {
+                const target = typeof options === 'string' ? options : (options.hostname || options.host || '?');
+                console.warn(`[NetworkGuard] Blocked outgoing request to restricted host: ${target}`);
+                // Return a no-op fake request that won't crash the caller
+                const { PassThrough } = require('stream');
+                const fake = new PassThrough();
+                fake.end = () => {};
+                fake.write = () => {};
+                fake.abort = () => {};
+                fake.destroy = () => {};
+                fake.on = () => fake;
+                fake.once = () => fake;
+                fake.setTimeout = () => fake;
+                setImmediate(() => {
+                    if (typeof cb === 'function') {
+                        try { cb({ statusCode: 403, headers: {}, on: () => {}, pipe: () => {}, resume: () => {} }); } catch (_) {}
+                    }
+                });
+                return fake;
+            }
+            return original(options, cb);
+        };
+    }
+
+    patchRequest(_https);
+    patchRequest(_http);
+})();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -239,6 +289,56 @@ app.get("/api/bot/status", async (req, res) => {
     }
 });
 
+const { updateUserBotSettings } = require('./gift/userStore');
+
+app.get("/api/bot/settings", verifyToken, async (req, res) => {
+    const uid = req.uid;
+    try {
+        const bot = await getUserBot(uid);
+        if (!bot) {
+            return res.json({ autolike: false, autoview: false });
+        }
+        res.json({
+            autolike: bot.autolike === true || bot.autolike === 'true',
+            autoview: bot.autoview === true || bot.autoview === 'true'
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post("/api/bot/settings", verifyToken, async (req, res) => {
+    const uid = req.uid;
+    const { autolike, autoview } = req.body;
+    try {
+        const bot = await getUserBot(uid);
+        if (!bot) {
+            return res.status(404).json({ error: "Bot not found. Please pair first." });
+        }
+        
+        const settings = {};
+        if (autolike !== undefined) settings.autolike = autolike;
+        if (autoview !== undefined) settings.autoview = autoview;
+        
+        await updateUserBotSettings(uid, settings);
+        
+        // If the bot process is currently active/running, restart it so the settings environment changes take effect
+        const processRunning = remoteBridge.isEnabled()
+            ? false
+            : botManager.isBotRunning(uid);
+            
+        if (processRunning && !remoteBridge.isEnabled()) {
+            console.log(`[Settings] Restarting bot for uid=${uid} to apply new settings...`);
+            const updatedBot = await getUserBot(uid);
+            await botManager.restartBot(uid, updatedBot.session_id);
+        }
+        
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post("/api/bot/start", verifyToken, async (req, res) => {
     const uid = req.uid;  // from verified token, not body
     try {
@@ -302,6 +402,11 @@ if (require.main === module) {
             `\nDeployment Successful!\n\n DEKUTCONNECT Session-Server Running on http://localhost:${PORT}`,
         );
         await bootstrap();
+    });
+} else {
+    // Eagerly bootstrap database and bot connections when required as a module
+    bootstrap().catch(err => {
+        console.error("❌ Session-Server auto-bootstrap failed:", err.message);
     });
 }
 

@@ -335,34 +335,28 @@
   <main class="flex-grow w-full max-w-5xl mx-auto px-5 py-6 flex flex-col gap-6 relative z-10">
 
     <section class="glass-card hero-card">
-      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-[1.25fr_.75fr] gap-6 items-center">
-        <div>
-          <div class="metric-pill mb-4"><i class="fas fa-shield-halved text-emerald-300"></i> Secure multi-platform bot console</div>
-          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight">
-            Deploy, pair, and monitor WhatsApp bots from one polished console.
-          </h1>
-          <p class="text-gray-400 text-sm sm:text-base mt-4 max-w-2xl leading-relaxed">
-            Built for VPS-hosted bot workers, Firebase authentication, PostgreSQL persistence, optional Redis caching, and S3-compatible media storage.
-          </p>
-          <div class="flex flex-wrap gap-2 mt-5">
-            <span class="metric-pill"><i class="fas fa-database text-sky-300"></i> PostgreSQL / SQLite</span>
-            <span class="metric-pill"><i class="fas fa-bolt text-amber-300"></i> Redis-ready</span>
-            <span class="metric-pill"><i class="fas fa-cloud text-purple-300"></i> S3 / R2 / MinIO</span>
+      <div class="relative z-10 flex flex-col gap-4">
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="metric-pill"><i class="fas fa-shield-halved text-emerald-300"></i> DEKUTCONNECT Console</div>
+          <!-- Live bots counter -->
+          <div class="metric-pill" id="heroBotsPill"><i class="fas fa-robot text-purple-300"></i> <span id="heroBotsText">Loading...</span> bots online</div>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black leading-tight">Your WhatsApp Bot, Deployed &amp; Running.</h1>
+        <p class="text-gray-400 text-sm leading-relaxed max-w-2xl">
+          Sign in, pair your number, and your bot goes live instantly. Backed by Firebase auth, PostgreSQL persistence, and a private VPS bridge.
+        </p>
+        <!-- Android-only notice -->
+        <div class="flex items-start gap-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-4 py-3 mt-1">
+          <i class="fab fa-android text-amber-400 text-xl flex-shrink-0 mt-0.5"></i>
+          <div>
+            <p class="text-amber-300 font-bold text-xs">Android WhatsApp Only</p>
+            <p class="text-gray-400 text-[11px] mt-0.5 leading-relaxed">Only <strong>WhatsApp on Android</strong> supports the Linked Devices feature used for pairing. iPhone (iOS) and WhatsApp Business accounts are <strong>not supported</strong>.</p>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="soft-panel p-4">
-            <p class="text-2xl font-black text-white">99.9%</p>
-            <p class="text-[11px] text-gray-400 mt-1">Target uptime with proper VPS scaling</p>
-          </div>
-          <div class="soft-panel p-4">
-            <p class="text-2xl font-black text-white">Zero</p>
-            <p class="text-[11px] text-gray-400 mt-1">Forced logout policy by default</p>
-          </div>
-          <div class="soft-panel p-4 col-span-2">
-            <p class="text-sm font-bold text-purple-200">Private VPS bridge</p>
-            <p class="text-[11px] text-gray-400 mt-1">Uses outbound Firebase commands when your bot has no public URL.</p>
-          </div>
+        <!-- DDoS / rate-limit notice -->
+        <div class="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
+          <i class="fas fa-shield-alt text-red-400 text-lg flex-shrink-0 mt-0.5"></i>
+          <p class="text-gray-400 text-[11px] leading-relaxed"><strong class="text-red-300">Rate limiting is active.</strong> Each IP is limited to 150 requests/minute. Exceeding this triggers a temporary block to protect the server from abuse.</p>
         </div>
       </div>
     </section>
@@ -474,6 +468,11 @@
         <div>
           <h3 class="text-lg font-bold gradient-text">Connect Your WhatsApp</h3>
           <p class="text-gray-400 text-xs mt-1">Choose a method below to link your number to the bot.</p>
+          <!-- Android requirement reminder -->
+          <div class="flex items-center gap-2 mt-3 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+            <i class="fab fa-android text-amber-400 text-base flex-shrink-0"></i>
+            <p class="text-[11px] text-amber-200 leading-relaxed"><strong>WhatsApp on Android only.</strong> iOS / iPhone WhatsApp cannot be used to pair.</p>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -501,6 +500,8 @@
               </div>
               <p class="text-[10px] text-gray-500">WhatsApp → Linked Devices → Link with Phone Number → Enter code</p>
             </div>
+            <!-- Pair error display -->
+            <p id="pairError" class="text-red-400 text-[11px] hidden font-semibold"></p>
           </div>
 
           <!-- QR Code -->
@@ -517,6 +518,42 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- ── Bot Settings (autolike / autoview) ── -->
+      <div id="settingsCard" class="glass-card p-6 flex flex-col gap-5 hidden">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 flex-shrink-0">
+            <i class="fas fa-sliders text-xs"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Bot Settings</h3>
+            <p class="text-gray-500 text-[11px]">Changes take effect immediately on the running bot.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Autolike Status -->
+          <div class="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-4">
+            <div>
+              <p class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-heart text-pink-400 text-xs"></i> Auto-Like Status</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">Auto-react ❤️ to every status update</p>
+            </div>
+            <button id="autolikeToggle" onclick="toggleSetting('autolike')" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-700 transition-colors focus:outline-none" aria-pressed="false">
+              <span id="autolikeThumb" class="inline-block h-4 w-4 translate-x-1 rounded-full bg-gray-400 transition-transform"></span>
+            </button>
+          </div>
+          <!-- Autoview Status -->
+          <div class="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-4">
+            <div>
+              <p class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-eye text-sky-400 text-xs"></i> Auto-View Status</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">Automatically view all status updates</p>
+            </div>
+            <button id="autoviewToggle" onclick="toggleSetting('autoview')" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-700 transition-colors focus:outline-none" aria-pressed="false">
+              <span id="autoviewThumb" class="inline-block h-4 w-4 translate-x-1 rounded-full bg-gray-400 transition-transform"></span>
+            </button>
+          </div>
+        </div>
+        <p id="settingsStatus" class="text-[11px] text-gray-500 hidden"></p>
       </div>
 
       <!-- ── RizzRok Advertisement ── -->
@@ -909,7 +946,9 @@
           navigator.credentials.store(pc).catch(() => {});
         }
       } catch (err) {
-        authError.textContent = friendlyAuthError(err.code);
+        // Show the exact Firebase error message so users know exactly what went wrong
+        const friendly = friendlyAuthError(err.code);
+        authError.textContent = friendly + (err.code ? ` (${err.code})` : '');
         authError.classList.remove('hidden');
       } finally {
         authSubmit.disabled = false;
@@ -919,15 +958,18 @@
 
     function friendlyAuthError(code) {
       const map = {
-        'auth/invalid-email':            'Please enter a valid email address.',
+        'auth/invalid-email':            'Invalid email address.',
         'auth/user-not-found':           'No account found with this email.',
-        'auth/wrong-password':           'Incorrect password. Please try again.',
+        'auth/wrong-password':           'Incorrect password.',
+        'auth/invalid-credential':       'Wrong email or password.',
         'auth/email-already-in-use':     'An account with this email already exists.',
         'auth/weak-password':            'Password must be at least 6 characters.',
-        'auth/too-many-requests':        'Too many attempts. Please wait a moment.',
-        'auth/network-request-failed':   'Network error. Check your connection.',
+        'auth/too-many-requests':        'Too many failed attempts — wait a moment before trying again.',
+        'auth/network-request-failed':   'Network error — check your internet connection.',
+        'auth/user-disabled':            'This account has been disabled. Contact support.',
+        'auth/operation-not-allowed':    'Sign-in method not enabled. Contact support.',
       };
-      return map[code] || 'Authentication failed. Please try again.';
+      return map[code] || 'Authentication failed.';
     }
 
     // ── Resend verification email ──
@@ -1025,6 +1067,11 @@
         if (!document.hidden) syncBotStatus();
       }, 8000);
 
+      // Show settings card only for verified users with a running bot
+      if (emailVerified) {
+        loadBotSettings();
+      }
+
       // Bind check verification button
       if (checkVerifyBtn) {
         checkVerifyBtn.onclick = async () => {
@@ -1106,10 +1153,23 @@
         }
       }
       document.getElementById('syncTime').textContent = `Last synced: ${new Date().toLocaleTimeString()}`;
-      if (data.totalConnectedBots !== undefined) {
-        document.getElementById('serverBotsCount').textContent = `Server: ${data.totalConnectedBots} active bot(s)`;
+      const total = data.totalConnectedBots;
+      if (total !== undefined) {
+        document.getElementById('serverBotsCount').textContent = `Server: ${total} active bot(s)`;
+        // Update hero pill too
+        const heroTxt = document.getElementById('heroBotsText');
+        if (heroTxt) heroTxt.textContent = total;
       } else {
         document.getElementById('serverBotsCount').textContent = `Server: — active bots`;
+      }
+      // Show or hide settings card based on verification + connection
+      const settingsCard = document.getElementById('settingsCard');
+      if (settingsCard) {
+        if (currentUser && currentUser.emailVerified && data.phone) {
+          settingsCard.classList.remove('hidden');
+        } else {
+          settingsCard.classList.add('hidden');
+        }
       }
     }
 
@@ -1239,6 +1299,8 @@
     // ── Pair code ──
     getPairCodeBtn.addEventListener('click', async () => {
       const number = phoneNumberInput.value.trim().replace(/[^0-9]/g, '');
+      const pairErrorEl = document.getElementById('pairError');
+      if (pairErrorEl) pairErrorEl.classList.add('hidden');
       if (!number || number.length < 9) {
         showToast('⚠️ Enter a valid number, e.g. 254712345678');
         return;
@@ -1249,30 +1311,101 @@
 
       try {
         const token = await getIdToken();
-        fetch(`/code?number=${number}`, {
+        const r = await fetch(`/code?number=${number}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        })
-          .then(r => r.json())
-          .then(data => {
-            if (data.code) {
-              pairingCodeDisplay.textContent = data.code;
-              pairingCodeContainer.classList.remove('hidden');
-              pairingCodeContainer.classList.add('flex');
-            } else {
-              showToast('❌ ' + (data.error || 'Pairing failed. Try again.'));
-            }
-          })
-          .catch(() => showToast('🔌 Connection error fetching code.'))
-          .finally(() => {
-            getPairCodeBtn.disabled = false;
-            getPairCodeBtn.innerHTML = 'Get Code';
-          });
+        });
+        let data = {};
+        try { data = await r.json(); } catch(e) { data = { error: `Server error ${r.status}: ${r.statusText}` }; }
+        if (data.code) {
+          pairingCodeDisplay.textContent = data.code;
+          pairingCodeContainer.classList.remove('hidden');
+          pairingCodeContainer.classList.add('flex');
+          if (pairErrorEl) pairErrorEl.classList.add('hidden');
+        } else {
+          const msg = data.error || data.message || `Request failed (HTTP ${r.status})`;
+          if (pairErrorEl) {
+            pairErrorEl.textContent = '❌ ' + msg;
+            pairErrorEl.classList.remove('hidden');
+          }
+          showToast('❌ ' + msg, 5000);
+        }
       } catch (e) {
-        showToast('🔑 Could not authenticate your session.');
+        const msg = e.message || 'Connection error — check your internet.';
+        if (pairErrorEl) {
+          pairErrorEl.textContent = '❌ ' + msg;
+          pairErrorEl.classList.remove('hidden');
+        }
+        showToast('🔌 ' + msg);
+      } finally {
         getPairCodeBtn.disabled = false;
         getPairCodeBtn.innerHTML = 'Get Code';
       }
     });
+
+    // ── Bot Settings: autolike / autoview ──
+    let _botSettings = { autolike: false, autoview: false };
+
+    async function loadBotSettings() {
+      if (!currentUser) return;
+      try {
+        const token = await getIdToken();
+        const r = await fetch('/api/bot/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) return;
+        const d = await r.json();
+        _botSettings = d;
+        applySettingsUI(d);
+      } catch (e) { /* silently ignore */ }
+    }
+
+    function applySettingsUI(settings) {
+      ['autolike', 'autoview'].forEach(key => {
+        const btn   = document.getElementById(`${key}Toggle`);
+        const thumb = document.getElementById(`${key}Thumb`);
+        if (!btn || !thumb) return;
+        const on = settings[key] === true;
+        btn.setAttribute('aria-pressed', String(on));
+        btn.classList.toggle('bg-purple-600', on);
+        btn.classList.toggle('bg-gray-700', !on);
+        thumb.classList.toggle('translate-x-6', on);
+        thumb.classList.toggle('translate-x-1', !on);
+        thumb.classList.toggle('bg-white', on);
+        thumb.classList.toggle('bg-gray-400', !on);
+      });
+    }
+
+    async function toggleSetting(key) {
+      if (!currentUser) return;
+      const statusEl = document.getElementById('settingsStatus');
+      const btn = document.getElementById(`${key}Toggle`);
+      if (btn) btn.disabled = true;
+      const newVal = !_botSettings[key];
+      try {
+        const token = await getIdToken();
+        const r = await fetch('/api/bot/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ [key]: newVal })
+        });
+        let d = {};
+        try { d = await r.json(); } catch(e) { d = { error: `Server error ${r.status}: ${r.statusText}` }; }
+        if (r.ok) {
+          _botSettings[key] = newVal;
+          applySettingsUI(_botSettings);
+          showToast(`✅ ${key === 'autolike' ? 'Auto-Like' : 'Auto-View'} ${newVal ? 'enabled' : 'disabled'}`);
+          if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.classList.remove('hidden'); setTimeout(() => statusEl.classList.add('hidden'), 2000); }
+        } else {
+          const msg = d.error || d.message || `Failed (HTTP ${r.status})`;
+          showToast(`❌ ${msg}`, 5000);
+          if (statusEl) { statusEl.textContent = '❌ ' + msg; statusEl.classList.remove('hidden'); }
+        }
+      } catch (e) {
+        const msg = e.message || 'Connection error';
+        showToast('❌ ' + msg);
+        if (statusEl) { statusEl.textContent = '❌ ' + msg; statusEl.classList.remove('hidden'); }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
 
     copyCodeBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(pairingCodeDisplay.textContent);

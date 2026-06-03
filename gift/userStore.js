@@ -70,10 +70,16 @@ async function _ensurePostgresTable(config) {
                 phone       VARCHAR(30),
                 session_id  TEXT,
                 status      VARCHAR(20) DEFAULT 'stopped',
+                autolike    BOOLEAN     DEFAULT FALSE,
+                autoview    BOOLEAN     DEFAULT FALSE,
                 created_at  TIMESTAMP   DEFAULT NOW(),
                 updated_at  TIMESTAMP   DEFAULT NOW()
             )
         `);
+        await pgPool.query(`
+            ALTER TABLE dekutconnect_bots ADD COLUMN IF NOT EXISTS autolike BOOLEAN DEFAULT FALSE;
+            ALTER TABLE dekutconnect_bots ADD COLUMN IF NOT EXISTS autoview BOOLEAN DEFAULT FALSE;
+        `).catch(() => {});
         try {
             const legacyCheck = await pgPool.query("SELECT to_regclass('gifted_bots')");
             if (legacyCheck.rows[0]?.to_regclass) {
@@ -139,7 +145,9 @@ async function saveUserBot(uid, phone, sessionId, status = 'running') {
         } catch (e) { console.error('Firestore saveUserBot error:', e.message); }
     } else {
         const store = _readJson();
-        store[uid] = { ...store[uid], ...data };
+        // Preserve existing settings on JSON save
+        const existing = store[uid] || {};
+        store[uid] = { autolike: false, autoview: false, ...existing, ...data };
         _writeJson(store);
     }
 }
@@ -201,18 +209,60 @@ async function deleteUserBot(uid) {
 async function getAllActiveUserBots() {
     if (pgPool) {
         try {
-            const r = await pgPool.query("SELECT * FROM dekutconnect_bots WHERE status='running'");
+            const r = await pgPool.query("SELECT * FROM dekutconnect_bots WHERE status != 'stopped'");
             return r.rows;
         } catch (e) { console.error('PG getAllActive error:', e.message); }
     }
     if (firestoreDb) {
         try {
-            const snap = await firestoreDb.collection('bots').where('status', '==', 'running').get();
+            const snap = await firestoreDb.collection('bots').where('status', '!=', 'stopped').get();
             return snap.docs.map(d => d.data());
         } catch (e) { console.error('Firestore getAllActive error:', e.message); }
     }
     const store = _readJson();
-    return Object.values(store).filter(b => b.status === 'running');
+    return Object.values(store).filter(b => b.status !== 'stopped');
 }
 
-module.exports = { initUserStore, saveUserBot, getUserBot, updateUserBotStatus, deleteUserBot, getAllActiveUserBots };
+async function updateUserBotSettings(uid, settings) {
+    const { autolike, autoview } = settings;
+    const patch = {};
+    if (autolike !== undefined) patch.autolike = autolike;
+    if (autoview !== undefined) patch.autoview = autoview;
+
+    if (pgPool) {
+        try {
+            const keys = Object.keys(patch);
+            if (keys.length > 0) {
+                const sets = keys.map((k, i) => `${k}=$${i+1}`).join(', ');
+                const vals = keys.map(k => patch[k]);
+                await pgPool.query(
+                    `UPDATE dekutconnect_bots SET ${sets}, updated_at=NOW() WHERE uid=$${keys.length + 1}`,
+                    [...vals, uid]
+                );
+            }
+        } catch (e) { console.error('PG updateSettings error:', e.message); }
+    }
+    if (firestoreDb) {
+        try {
+            await firestoreDb.collection('bots').doc(uid).update({ ...patch, updated_at: new Date().toISOString() });
+        } catch (e) { console.error('Firestore updateSettings error:', e.message); }
+    } else {
+        const store = _readJson();
+        if (store[uid]) {
+            if (autolike !== undefined) store[uid].autolike = autolike;
+            if (autoview !== undefined) store[uid].autoview = autoview;
+            store[uid].updated_at = new Date().toISOString();
+        }
+        _writeJson(store);
+    }
+}
+
+module.exports = {
+    initUserStore,
+    saveUserBot,
+    getUserBot,
+    updateUserBotStatus,
+    deleteUserBot,
+    getAllActiveUserBots,
+    updateUserBotSettings
+};
