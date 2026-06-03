@@ -1187,26 +1187,32 @@
     // Invalidate token cache on user change
     function _clearTokenCache() { _cachedToken = null; _tokenExpiry = 0; }
 
-    function syncBotStatus(force = false) {
+    async function syncBotStatus(force = false) {
       if (!currentUser) return;
       if (document.hidden && !force) return;  // skip when tab invisible
       if (pendingStatusFetch) return;          // deduplicate concurrent calls
       pendingStatusFetch = true;
-      fetch(`/api/bot/status?uid=${currentUser.uid}`)
-        .then(r => r.json())
-        .then(data => {
-          // Skip re-render if nothing changed (reduce DOM churn)
-          const sig = data.connected + '|' + (data.phone || '');
-          if (sig !== lastBotStatus) {
-            lastBotStatus = sig;
-            _applyBotStatus(data);
-          } else {
-            // Still update clock
-            document.getElementById('syncTime').textContent = `Last synced: ${new Date().toLocaleTimeString()}`;
-          }
-        })
-        .catch(() => {})
-        .finally(() => { pendingStatusFetch = false; });
+      try {
+        const token = await getIdToken();
+        const r = await fetch(`/api/bot/status?uid=${currentUser.uid}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error(`Status HTTP error: ${r.status}`);
+        const data = await r.json();
+        // Skip re-render if nothing changed (reduce DOM churn)
+        const sig = data.connected + '|' + (data.phone || '');
+        if (sig !== lastBotStatus) {
+          lastBotStatus = sig;
+          _applyBotStatus(data);
+        } else {
+          // Still update clock
+          document.getElementById('syncTime').textContent = `Last synced: ${new Date().toLocaleTimeString()}`;
+        }
+      } catch (err) {
+        console.warn("syncBotStatus error:", err);
+      } finally {
+        pendingStatusFetch = false;
+      }
     }
 
     // ── Bot control buttons ──
