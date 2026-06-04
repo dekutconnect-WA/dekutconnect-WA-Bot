@@ -1,179 +1,125 @@
-# Gifted-Session-Generator
+# 𝐃𝐄𝐊𝐔𝐓𝐂𝐎𝐍𝐍𝐄𝐂𝐓 𝐖𝐀-𝐁𝐨𝐭 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 𝟏.𝟎.𝟎
 
-> WhatsApp session generator for **ATASSA-MD / Gifted-MD** and any Baileys-based bot.  
-> Supports **pair code** and **QR code** login, with optional **short session IDs** stored in MongoDB or PostgreSQL.
-
-<a href='https://github.com/mauricegift/gifted-session/fork' target="_blank">
-  <img alt='FORK REPO' src='https://img.shields.io/badge/-FORK REPO-black?style=for-the-badge&logo=github&logoColor=white'/>
-</a>
+DEKUTCONNECT WA-Bot is a high-performance, feature-rich Multi-Device WhatsApp bot designed to enhance and automate your WhatsApp communication experience.
 
 ---
 
-## Features
+## 𝟏. 𝐒𝐄𝐓 𝐔𝐏
 
-- 🔗 **Pair Code login** — no phone needed, enter code in WhatsApp → Linked Devices
-- 📷 **QR Code login** — traditional QR scan
-- 🗜️ **Long session** — full zlib/base64 inline string (works anywhere, no DB needed)
-- 🗃️ **Short session** — compact ID stored in MongoDB or PostgreSQL (auto-falls back to long if no DB)
-- ⚡ Auto-detects database type from `DATABASE_URL` (`mongodb://` or `postgres://`)
+### 𝐀. 𝐅𝐎𝐑𝐊 𝐑𝐄𝐏𝐎𝐒𝐈𝐓𝐎𝐑𝐘
+Fork this repository to your GitHub account to get your own deployable instance of the bot.
 
 ---
 
-## Environment Variables
-
-Set these in a `.env` file or your hosting dashboard:
-
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | Optional | MongoDB (`mongodb+srv://...`) or PostgreSQL (`postgres://...`) connection string. If not set, all sessions use long format. |
-| `SESSION_PREFIX` | Optional | Prefix prepended to session strings. Default: `Gifted~` |
-| `PORT` | Optional | Port to listen on. Default: `50900` |
-| `BOT_REPO` | Optional | GitHub URL shown in WhatsApp message button. Default: atassa repo |
-| `WA_CHANNEL` | Optional | WhatsApp channel URL shown in message button. |
-| `MSG_FOOTER` | Optional | Footer text in WhatsApp session message. |
+### 𝐁. 𝐋𝐈𝐍𝐊 𝐖𝐈𝐓𝐇 𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏
+Get your `SESSION_ID` by linking your WhatsApp account:
+1. Go to the pairing session service page.
+2. Link using your phone number to receive your session ID (usually prefixed with `DEKUTCONNECT~`).
 
 ---
 
-## API Endpoints
+## 𝟐. 𝐃𝐄𝐏𝐋𝐎𝐘𝐌𝐄𝐍𝐓 𝐎𝐏𝐓𝐈𝐎𝐍𝐒
 
-| Endpoint | Description |
-|---|---|
-| `GET /` | Home landing page |
-| `GET /pair` | Pair code login page |
-| `GET /qr` | QR code landing page |
-| `GET /qr/session?type=short\|long` | Generates and displays QR code |
-| `GET /code?number=2547xxx&type=short\|long` | Returns pair code JSON `{ code, fallback }` |
-| `GET /health` | Server health + storage backend status |
-
-> `fallback: true` in the `/code` response means short was requested but no DB is configured — it automatically sent a long session.
+### (A) HEROKU DEPLOYMENT
+- PostgreSQL is auto-provisioned via the `heroku-postgresql:essential-0` addon.
+- Environment variables are automatically populated. Fill in your `SESSION_ID`.
 
 ---
 
-## Usage in Your Bot
+### (B) RENDER DEPLOYMENT
+1. Create an account on Render.
+2. Connect your forked GitHub repository.
+3. Render automatically provisions the PostgreSQL database linked to the bot using the `render.yaml` configuration.
+4. Set the `SESSION_ID` environment variable when prompted.
 
-### Handling Both Short and Long Sessions
+---
 
-```js
-// lib/session.js
-const fs = require('fs');
-const zlib = require('zlib');
-const path = require('path');
-const axios = require('axios');
+### (C) RAILWAY DEPLOYMENT
+1. Connect your repository to Railway.
+2. Provision a PostgreSQL instance in the same Railway project. Railway automatically sets `DATABASE_URL` for your bot service.
+3. Add the following environment variables:
+   - `SESSION_ID`
+   - `MODE` (e.g. `public` or `private`)
+   - `TIME_ZONE` (e.g. `Africa/Nairobi`)
 
-const sessionDir = path.join(__dirname, '..', 'session');
-const credsPath = path.join(sessionDir, 'creds.json');
+---
 
-if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+### (D) KOYEB DEPLOYMENT
+1. Connect your repository to Koyeb.
+2. Set up a free external PostgreSQL database (e.g., via [neon.tech](https://neon.tech)) and set the connection string as `DATABASE_URL`.
+3. Set your `SESSION_ID`, `MODE`, and `TIME_ZONE` environment variables.
 
-async function loadSession(SESSION_ID) {
-    if (!SESSION_ID || typeof SESSION_ID !== 'string') {
-        throw new Error('SESSION_ID is missing or invalid');
-    }
+---
 
-    // Remove existing creds
-    if (fs.existsSync(credsPath)) fs.unlinkSync(credsPath);
+### (E) VPS / SELF-HOSTED DEPLOYMENT
 
-    const PREFIX = 'Gifted~';
+Make sure Node.js (version 20+) and Git are installed on your Linux server.
 
-    if (!SESSION_ID.startsWith(PREFIX)) {
-        throw new Error(`Invalid session format. Expected to start with "${PREFIX}"`);
-    }
-
-    const payload = SESSION_ID.slice(PREFIX.length);
-
-    // Detect short vs long session
-    // Short: compact alphanumeric ID (~12 chars, no base64 padding)
-    // Long: full zlib/base64 string (very long)
-    if (payload.length < 50) {
-        // SHORT SESSION — fetch full session from server
-        const serverUrl = `https://session.gifted.co.ke/session/${payload}`;
-        const response = await axios.get(serverUrl, { timeout: 10000 });
-        const fullSession = response.data;
-
-        // fullSession is itself a long session string — recurse
-        return loadSession(fullSession.trim());
-    } else {
-        // LONG SESSION — decode zlib/base64 inline
-        const compressedData = Buffer.from(payload, 'base64');
-        const decompressedData = zlib.gunzipSync(compressedData);
-        fs.writeFileSync(credsPath, decompressedData, 'utf8');
-        console.log('✅ Session loaded successfully');
-    }
-}
-
-module.exports = { loadSession };
+**1. Clone the repository**
+```bash
+git clone https://github.com/dekutconnect/DEKUTCONNECT-WA-Bot.git
+cd DEKUTCONNECT-WA-Bot
 ```
 
-### In Your Bot Start File
-
-```js
-// index.js
-const { loadSession } = require('./lib/session');
-const { useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-
-async function connectToWhatsApp() {
-    await loadSession(process.env.SESSION_ID);
-
-    const { state, saveCreds } = await useMultiFileAuthState('./session');
-    const { version } = await fetchLatestBaileysVersion();
-
-    const sock = makeWASocket({
-        version,
-        auth: state,
-        printQRInTerminal: !process.env.SESSION_ID,
-        // ... your other options
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-    // ... rest of your bot logic
-}
-
-connectToWhatsApp();
+**2. Install dependencies**
+```bash
+npm install
 ```
 
-### Example `.env` for Your Bot
-
+**3. Configure environment variables**
+Create a `.env` file in the root directory:
 ```env
-SESSION_ID=Gifted~abc123xyz   # short session
-# or
-SESSION_ID=Gifted~H4sIAAAAA...  # long session (full zlib string)
+SESSION_ID=DEKUTCONNECT~your_session_id_here
+MODE=public
+TIME_ZONE=Africa/Nairobi
+AUTO_LIKE_STATUS=true
+AUTO_READ_STATUS=true
+DATABASE_URL=
+```
+
+**4. Install FFmpeg (required for media commands)**
+```bash
+# Ubuntu / Debian
+sudo apt update && sudo apt install -y ffmpeg
+```
+
+**5. Start the bot**
+```bash
+npm start
+```
+
+**6. PM2 Process Management**
+Keep the process running continuously in the background:
+```bash
+npm install -g pm2
+pm2 start index.js --name dekutconnect-wa-bot
+pm2 save
+pm2 startup
+```
+
+**7. Stopping and Restarting**
+```bash
+pm2 stop dekutconnect-wa-bot
+pm2 restart dekutconnect-wa-bot && pm2 logs
 ```
 
 ---
 
-## Deployment
+## 𝟑. 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐓𝐈𝐎𝐍𝐒
 
-<a href='https://dashboard.heroku.com/new?template=https://github.com/mauricegift/gifted-session' target="_blank">
-  <img alt='HEROKU DEPLOY' src='https://img.shields.io/badge/-HEROKU DEPLOY-black?style=for-the-badge&logo=heroku&logoColor=white'/>
-</a>
-<br>
-<a href='https://dashboard.render.com' target="_blank">
-  <img alt='DEPLOY TO RENDER' src='https://img.shields.io/badge/-DEPLOY TO RENDER-black?style=for-the-badge&logo=render&logoColor=white'/>
-</a>
-<br>
-<a href='https://app.koyeb.com' target="_blank">
-  <img alt='DEPLOY TO KOYEB' src='https://img.shields.io/badge/-DEPLOY TO KOYEB-black?style=for-the-badge&logo=koyeb&logoColor=white'/>
-</a>
+The bot uses database settings that can be customized dynamically using commands or database entries.
 
----
-
-## Live Demo
-
-[`https://session.gifted.co.ke`](https://session.gifted.co.ke)
+| Key | Description | Default |
+|---|---|---|
+| `PREFIX` | Command prefix | `.` |
+| `OWNER_NAME` | Owner name | `ceo.eduniapps.com` |
+| `BOT_NAME` | Name of the bot | `DEKUTCONNECT WA-Bot` |
+| `MODE` | Worktype mode | `private` |
+| `TIME_ZONE` | Timezone location | `Africa/Nairobi` |
+| `AUTO_READ_STATUS` | Auto view statuses | `false` |
+| `AUTO_LIKE_STATUS` | Auto like statuses | `false` |
 
 ---
 
-## Owner
-
-<a href="https://github.com/mauricegift">
-  <img src="https://github.com/mauricegift.png" width="150" height="150" alt="Gifted Tech" style="border-radius:50%"/>
-</a>
-
-[`ℹ️ Contact Owner`](https://api.gifted.co.ke/contact)
-
-
-## Repo Star History
-
-[![Gifted-Session](https://api.star-history.com/svg?repos=mauricegift/gifted-session&type=Timeline)](#)
-
-<a><img src='https://i.imgur.com/LyHic3i.gif'/></a>
+## 𝟒. 𝐋𝐈𝐂𝐄𝐍𝐒𝐄
+This project is licensed under the MIT License.

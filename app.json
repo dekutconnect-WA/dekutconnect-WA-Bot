@@ -1,17 +1,65 @@
 {
-    "name": "Gifted Session Generator",
-    "description": "Web Session Generator",
-    "logo": "https://files.catbox.moe/52699c.jpg",
-    "repository": "https://github.com/mauricegift/gifted-sess",
-    "keywords": ["Gifted-Tech"],
-    "success_url": "/", 
-    "buildpacks": [{ "url": "https://github.com/heroku/heroku-buildpack-nodejs#latest" } ],
-    "env": {      
-      "PORT": {
-        "description": "Port for web app.4000,5000,3000... any!",
-        "value": "50900",
-        "required": false 
+  "name": "dekutconnect-wa-bot",
+  "version": "5.0.0",
+  "description": "DEKUTCONNECT WA-Bot, a Multi Device Whatsapp Bot built to Enhance Whatsapp Communication Experience",
+  "logo": "https://i.postimg.cc/CxN0RKcD/dekutconnectdp.jpg",
+  "keywords": ["dekutconnect", "dekutconnect-wa-bot", "gifted-baileys", "gifted-btns", "gifted-api"],
+  "success_url": "/",
+  "stack": "heroku-22",
+  "env": {
+    "SESSION_ID": {
+      "description": "Your bot SESSION_ID. Get one from the pairing session page.",
+      "required": true,
+      "value": ""
+    },
+    "MODE": {
+      "description": "Worktype of your bot. Use 'public' (everyone can use it) or 'private' (only bot number).",
+      "required": true,
+      "value": "public"
+    },
+    "TIME_ZONE": {
+      "description": "Your timezone e.g. Africa/Nairobi, America/New_York, Asia/Kolkata",
+      "required": true,
+      "value": "Africa/Nairobi"
+    },
+    "AUTO_LIKE_STATUS": {
+      "description": "Auto-like WhatsApp statuses. Set true or false.",
+      "required": false,
+      "value": "true"
+    },
+    "AUTO_READ_STATUS": {
+      "description": "Auto-view WhatsApp statuses. Set true or false.",
+      "required": false,
+      "value": "true"
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL connection URL. Leave blank to use the auto-provisioned Heroku Postgres addon, or supply your own (Neon, Supabase, etc.). Falls back to SQLite if empty and no addon is attached.",
+      "required": false,
+      "value": ""
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:essential-0",
+      "as": "DATABASE"
+    }
+  ],
+  "buildpacks": [
+    { "url": "heroku/nodejs" },
+    { "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest" }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "environments": {
+    "test": {
+      "addons": [],
+      "env": {
+        "DATABASE_URL": ""
       }
-    }   
-
+    }
+  }
 }

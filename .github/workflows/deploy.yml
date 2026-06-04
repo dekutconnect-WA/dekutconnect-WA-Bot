@@ -1,0 +1,175 @@
+name: 🚀 Deploy — Multi-Provider CDN
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # Build Na-api-main (Next.js)
+  # ─────────────────────────────────────────────────────────
+  build:
+    name: 🔨 Build Na-api-main
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Na-api-main
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Na-api-main/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: Na-api-main/.next
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy to Vercel (primary — serverless edge functions)
+  # ─────────────────────────────────────────────────────────
+  deploy-vercel:
+    name: ▲ Deploy → Vercel
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: "team_0GncndmMtSEi3pqg7XkDeCEF"
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: Na-api-main
+          vercel-args: '--prod --scope team_0GncndmMtSEi3pqg7XkDeCEF'
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy to Cloudflare Pages (edge — global CDN)
+  # ─────────────────────────────────────────────────────────
+  deploy-cloudflare:
+    name: 🌐 Deploy → Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Na-api-main
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Na-api-main/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Cloudflare (next-on-pages)
+        run: npx @cloudflare/next-on-pages@1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: "1008de2b4f233c35a553b0b393b60cf9"
+          projectName: puruboy-api
+          directory: Na-api-main/.vercel/output/static
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy to Firebase Hosting (static assets / CDN fallback)
+  # ─────────────────────────────────────────────────────────
+  deploy-firebase:
+    name: 🔥 Deploy → Firebase Hosting
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Na-api-main
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Na-api-main/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Firebase (static export)
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          entryPoint: Na-api-main
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy session-server to Render (bot manager)
+  # ─────────────────────────────────────────────────────────
+  deploy-session-server:
+    name: 🤖 Deploy → Render (Session Server)
+    runs-on: ubuntu-latest
+    if: contains(github.event.commits[0].modified, 'gifted-session-main') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Trigger Render Deploy Hook
+        run: |
+          curl -sS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            --fail
+        shell: bash
+
+  # ─────────────────────────────────────────────────────────
+  # Summary notification
+  # ─────────────────────────────────────────────────────────
+  notify:
+    name: 📣 Deployment Summary
+    needs: [deploy-vercel, deploy-cloudflare, deploy-firebase]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print deployment status
+        run: |
+          echo "============================================"
+          echo " Deployment Summary"
+          echo "============================================"
+          echo " Vercel:     ${{ needs.deploy-vercel.result }}"
+          echo " Cloudflare: ${{ needs.deploy-cloudflare.result }}"
+          echo " Firebase:   ${{ needs.deploy-firebase.result }}"
+          echo "============================================"

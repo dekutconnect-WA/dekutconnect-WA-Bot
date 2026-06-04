@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "http://panel.bwmxmd.co.ke:27203/$1" }
-  ]
-}

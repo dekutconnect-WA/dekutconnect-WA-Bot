@@ -1,0 +1,13 @@
+specVersion: "v1alpha"
+serviceId: "puruboy-api-dataconnect"
+location: "us-central1"
+
+schema:
+  datasource:
+    postgresql:
+      database: "puruboy_db"
+      cloudSql:
+        instanceId: "puruboy-api:us-central1:puruboy-sql"
+
+connectorDirs:
+  - "connectors"

@@ -1,34 +1,80 @@
 {
-  "name": "atassa-session",
+  "name": "dekutconnect-wa-bot",
+  "version": "5.0.5",
+  "description": "DEKUTCONNECT WA-Bot, a Multi Device Whatsapp Bot built to Enhance Whatsapp Communication Experience",
   "main": "./index.js",
-  "engines": {
-    "node": "22.x"
-  },
   "type": "commonjs",
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name giftedsess",
-    "stop": "pm2 stop giftedsess",
-    "restart": "pm2 restart giftedsess"
+    "dev": "node index.js",
+    "start": "pm2 start index.js --deep-monitoring --attach --name dekutconnect-wa-bot",
+    "stop": "pm2 stop dekutconnect-wa-bot",
+    "restart": "pm2 restart dekutconnect-wa-bot && pm2 logs",
+    "stash": "git stash && git stash drop"
   },
-  "author": "Gifted Tech",
+  "keywords": [
+    "dekutconnect",
+    "dekutconnect-wa-bot",
+    "whatsapp-bot"
+  ],
+  "author": "ceo.eduniapps.com",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.587.0",
+    "@ffmpeg-installer/ffmpeg": "*",
+    "@hapi/boom": "*",
+    "@vitalets/google-translate-api": "^9.2.0",
     "@whiskeysockets/baileys": "npm:baileys@6.7.21",
-    "body-parser": "^2.2.2",
+    "acrcloud": "*",
+    "adm-zip": "*",
+    "audio-decode": "^2.2.3",
+    "axios": "^1.2.5",
+    "body-parser": "latest",
+    "buffer": "*",
+    "cloudscraper": "^4.6.0",
     "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "*",
+    "dotenv": "*",
+    "express": "^4.19.2",
+    "ffmpeg-static": "*",
+    "file-type": "17.1.6",
     "firebase": "^12.13.0",
     "firebase-admin": "^10.3.0",
-    "gifted-btns": "*",
+    "fluent-ffmpeg": "*",
+    "form-data": "^4.0.1",
+    "fs": "^0.0.1-security",
+    "fs-extra": "^11.1.0",
+    "gifted-baileys": "file:gifted-baileys-main",
+    "gifted-btns": "^1.0.2",
+    "gifted-dls": "*",
+    "google-tts-api": "*",
+    "jimp": "*",
+    "mime-types": "^2.1.35",
+    "moment-timezone": "^0.5.45",
     "mongoose": "^9.3.0",
-    "path": "*",
-    "pg": "^8.20.0",
-    "pino": "^10.3.1",
-    "pm2": "*",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "path": "latest",
+    "pg": "*",
+    "pino": "^7.0.5",
+    "pm2": "^7.0.1",
     "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
     "redis": "^4.7.0",
+    "sequelize": "*",
+    "sharp": "0.32.6",
+    "sqlite3": "^5.1.7",
+    "ssh2": "^1.17.0",
+    "stream": "*",
+    "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "swagger-jsdoc": "^6.2.8"
-  }
+    "util": "*",
+    "wa-sticker-formatter": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dekutconnect/DEKUTCONNECT-WA-Bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dekutconnect/DEKUTCONNECT-WA-Bot/issues"
+  },
+  "homepage": "https://github.com/dekutconnect/DEKUTCONNECT-WA-Bot#readme"
 }

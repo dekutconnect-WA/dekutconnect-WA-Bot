@@ -1,0 +1,29 @@
+name = "puruboy-api"
+account_id = "1008de2b4f233c35a553b0b393b60cf9"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages project — deploy with: npx wrangler pages deploy .vercel/output/static
+# Workers with next-on-pages — build with: npx @cloudflare/next-on-pages
+pages_build_output_dir = ".vercel/output/static"
+
+[placement]
+mode = "smart"
+
+# ── KV namespace for lightweight chat poll caching ──
+# Create with: npx wrangler kv:namespace create "CHAT_POLL_CACHE"
+# Then paste the returned id below
+# [[kv_namespaces]]
+# binding = "CHAT_POLL_CACHE"
+# id = "REPLACE_WITH_YOUR_KV_ID"
+
+# ── Cache rules via Cloudflare Cache API ──
+[vars]
+NEXT_PUBLIC_ENV = "production"
+
+# ── Rate limiting — protects /api/chat POST (message sends) ──
+# Enable via Cloudflare dashboard → Security → Rate Limiting
+# Rule: 60 POST requests / 60s per IP to /api/chat
+
+[[rules]]
+type = "ESModule"

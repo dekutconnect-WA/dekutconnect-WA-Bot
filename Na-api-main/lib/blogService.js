@@ -1,0 +1,200 @@
+const pool = require('./db');
+const { v4: uuidv4 } = require('uuid');
+
+// Helper untuk membuat excerpt (cuplikan) dari markdown
+const createExcerpt = (markdown, length = 120) => {
+    if (!markdown) return '';
+    const plainText = markdown
+        .replace(/!\[.*?\]\(.*?\)/g, '') 
+        .replace(/\[.*?\]\(.*?\)/g, '$1') 
+        .replace(/#{1,6}\s/g, '') 
+        .replace(/(\*\*|__)(.*?)\1/g, '$2') 
+        .replace(/(\*|_)(.*?)\1/g, '$2') 
+        .replace(/`{3}.*?`{3}/gs, '') 
+        .replace(/`(.+?)`/g, '$1') 
+        .replace(/\n/g, ' ')
+        .trim();
+    
+    return plainText.length > length ? plainText.substring(0, length) + '...' : plainText;
+};
+
+// Inisialisasi tabel jika belum ada
+const ensureTableExists = async () => {
+    const query = `
+        CREATE TABLE IF NOT EXISTS blogs (
+            id UUID PRIMARY KEY,
+            tag TEXT NOT NULL,
+            image TEXT,
+            content TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    `;
+    await pool.query(query);
+};
+
+const blogService = {
+    getAll: async (page = 1, limit = 5) => {
+        await ensureTableExists();
+        
+        const limitVal = parseInt(limit, 10);
+        const pageVal = parseInt(page, 10);
+        const offset = (pageVal - 1) * limitVal;
+
+        try {
+            // Ambil total count
+            const countResult = await pool.query('SELECT COUNT(*) FROM blogs');
+            const totalPosts = parseInt(countResult.rows[0].count, 10);
+            const totalPages = Math.ceil(totalPosts / limitVal);
+
+            // OPTIMIZATION: Fetch only necessary columns and truncate content.
+            const result = await pool.query(
+                'SELECT id, tag, image, LEFT(content, 2000) as content, created_at, updated_at FROM blogs ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+                [limitVal, offset]
+            );
+
+            const posts = result.rows.map(row => ({
+                id: row.id,
+                tag: row.tag,
+                image: row.image,
+                content: row.content, // This is partial content now
+                createdAt: row.created_at.toISOString(),
+                updatedAt: row.updated_at.toISOString(),
+                excerpt: createExcerpt(row.content)
+            }));
+
+            return {
+                posts,
+                totalPosts,
+                totalPages,
+                currentPage: pageVal
+            };
+        } catch (error) {
+            console.error("Database Error:", error);
+            throw new Error('Failed to fetch posts from Database.');
+        }
+    },
+
+    getById: async (id) => {
+        await ensureTableExists();
+        try {
+            const result = await pool.query('SELECT * FROM blogs WHERE id = $1', [id]);
+            
+            if (result.rows.length === 0) return null;
+            const row = result.rows[0];
+
+            return {
+                id: row.id,
+                tag: row.tag,
+                image: row.image,
+                content: row.content, // Full content
+                createdAt: row.created_at.toISOString(),
+                updatedAt: row.updated_at.toISOString(),
+                excerpt: createExcerpt(row.content)
+            };
+        } catch (error) {
+            console.error("Database GetById Error:", error);
+            throw new Error('Failed to fetch post details.');
+        }
+    },
+
+    create: async (postData) => {
+        await ensureTableExists();
+        const { image, content, tag } = postData;
+        const id = uuidv4();
+        const createdAt = new Date();
+        
+        try {
+            const query = `
+                INSERT INTO blogs (id, tag, image, content, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $5)
+                RETURNING *
+            `;
+            const values = [id, tag, image || '', content, createdAt];
+            const result = await pool.query(query, values);
+            const row = result.rows[0];
+
+            // AUTO-CONTROL: Limit to 500 items
+            const pruneQuery = `
+                DELETE FROM blogs 
+                WHERE id NOT IN (
+                    SELECT id FROM blogs 
+                    ORDER BY created_at DESC 
+                    LIMIT 500
+                )
+            `;
+            await pool.query(pruneQuery);
+
+            return {
+                id: row.id,
+                tag: row.tag,
+                image: row.image,
+                content: row.content,
+                createdAt: row.created_at.toISOString(),
+                updatedAt: row.updated_at.toISOString()
+            };
+        } catch (error) {
+            console.error("Database Create Error:", error);
+            throw new Error('Failed to create post in Database.');
+        }
+    },
+
+    update: async (id, postData) => {
+        await ensureTableExists();
+        const { image, content, tag } = postData;
+        const updatedAt = new Date();
+
+        try {
+            // Bangun query dinamis
+            let fields = ['updated_at = $2'];
+            let values = [id, updatedAt];
+            let idx = 3;
+
+            if (tag !== undefined) { fields.push(`tag = $${idx++}`); values.push(tag); }
+            if (image !== undefined) { fields.push(`image = $${idx++}`); values.push(image); }
+            if (content !== undefined) { fields.push(`content = $${idx++}`); values.push(content); }
+
+            const query = `
+                UPDATE blogs 
+                SET ${fields.join(', ')}
+                WHERE id = $1
+                RETURNING *
+            `;
+
+            const result = await pool.query(query, values);
+
+            if (result.rows.length === 0) {
+                throw new Error('Post not found');
+            }
+
+            const row = result.rows[0];
+            return {
+                id: row.id,
+                tag: row.tag,
+                image: row.image,
+                content: row.content,
+                createdAt: row.created_at.toISOString(),
+                updatedAt: row.updated_at.toISOString()
+            };
+        } catch (error) {
+            console.error("Database Update Error:", error);
+            throw error;
+        }
+    },
+
+    delete: async (id) => {
+        await ensureTableExists();
+        try {
+            const result = await pool.query('DELETE FROM blogs WHERE id = $1', [id]);
+            if (result.rowCount === 0) {
+                throw new Error('Post not found');
+            }
+            return { message: 'Post deleted successfully.' };
+        } catch (error) {
+            console.error("Database Delete Error:", error);
+            throw error;
+        }
+    }
+};
+
+module.exports = blogService;

@@ -1,44 +1,40 @@
+const fs = require("fs-extra");
 const path = require('path');
 
+const presetSessionId = process.env.SESSION_ID;
 require('dotenv').config({
   path: path.join(__dirname, '.env'),
   quiet: true,
   override: true,
 });
+if (presetSessionId) {
+  process.env.SESSION_ID = presetSessionId;
+}
 
 module.exports = {
-    PORT: process.env.PORT || 50900,
-    SESSION_PREFIX: process.env.SESSION_PREFIX || "DEKUTCONNECT~",
-    GC_JID: process.env.GC_JID || "GuS93JhyfyE56LOV3ZJTFZ",
+    MODE: process.env.MODE,
+    SESSION_ID: process.env.SESSION_ID,
+    TIME_ZONE: process.env.TIME_ZONE,
+    AUTO_READ_STATUS: process.env.AUTO_READ_STATUS,
+    AUTO_LIKE_STATUS: process.env.AUTO_LIKE_STATUS,
 
-    // Database — Supabase PostgreSQL connection string
+    // Database — Supabase PostgreSQL (or any Postgres/SQLite)
     DATABASE_URL: process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || "",
 
-    // Bot control mode: 'local' = spawn child processes, 'firebase' = remote VPS via Firebase RTDB
-    BOT_CONTROL_MODE: process.env.BOT_CONTROL_MODE || "firebase",
+    // Session server URL — where to fetch session credentials from
+    SESSION_SERVER_URL: process.env.SESSION_SERVER_URL || "https://dekutconnect-wa-bot.vercel.app",
 
-    // Firebase Realtime Database URL (used for VPS command bridge)
-    FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL || `https://${process.env.FIREBASE_PROJECT_ID || 'dekut-app-main'}-default-rtdb.firebaseio.com`,
+    // Na-api dashboard URL
+    NA_API_URL: process.env.NA_API_URL || "https://dekutconnectdownloaders.vercel.app",
 
-    // Session server URL — the VPS bot uses this to fetch session credentials
-    SESSION_SERVER_URL: process.env.SESSION_SERVER_URL || process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "https://session.bot.connect.dekut.org",
-
-    BOT_REPO: process.env.BOT_REPO || "https://github.com/dekutconnect/wa-bot",
-    WA_CHANNEL: process.env.WA_CHANNEL || "https://whatsapp.com/channel/0029VbCpYtZLtOj5LDuj7Q1p",
-    MSG_FOOTER: process.env.MSG_FOOTER || "> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴅᴇᴋᴜᴛᴄᴏɴɴᴇᴄᴛ*",
-
-    // Firebase Client Configuration (Defaults provided by user)
-    FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || "AIzaSyDBpcfygHw2pCBrVtMp6dGeIRw2sCAC6TI",
-    FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN || "dekut-app-main.firebaseapp.com",
+    // Firebase configuration for command bridge
     FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || "dekut-app-main",
-    FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || "dekut-app-main.firebasestorage.app",
-    FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID || "227712751066",
-    FIREBASE_APP_ID: process.env.FIREBASE_APP_ID || "1:227712751066:web:1179019f15578e1de71ce3",
-    FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID || "G-1K8D7E0YZZ",
-
-    // Firebase Admin base64 service account JSON (optional)
+    FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL || "https://dekut-app-main-default-rtdb.firebaseio.com",
     FIREBASE_ADMIN_CREDENTIAL: process.env.FIREBASE_ADMIN_CREDENTIAL || "",
-    FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT || "",
+
+    // Bot bridge — enables Firebase Realtime Database command listener
+    BOT_BRIDGE_ENABLED: process.env.BOT_BRIDGE_ENABLED === "true",
+    BOT_UID: process.env.BOT_UID || "",
 };
+
+// Hot-reloading removed to prevent crash loop during VPS deployment file transfer

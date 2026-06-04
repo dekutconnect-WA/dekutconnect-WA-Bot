@@ -1,0 +1,223 @@
+# Firebase Data Connect — SQL Connect Schema
+# Backend: Cloud SQL for PostgreSQL
+# Auto-generated tables, indexes, and foreign keys from this schema.
+#
+# Deploy: firebase dataconnect:sql:migrate --force
+#
+# Reference: https://firebase.google.com/docs/data-connect/schema-reference
+
+# ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum BotStatus {
+  RUNNING
+  STOPPED
+  PAUSED
+  ERROR
+}
+
+enum CommandCategory {
+  OWNER
+  DOWNLOADER
+  TOOLS
+  FUN
+  SEARCH
+  STICKERS
+  MEDIA
+  GROUP
+  GENERAL
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  GIF
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+# ─── User ───────────────────────────────────────────────────────────────────
+
+"""
+Platform user authenticated via Firebase Auth.
+Synced from Firestore on first login.
+"""
+type User @table(name: "users", singular: "user", plural: "users") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  firebaseUid: String! @col(name: "firebase_uid") @unique
+  email: String! @col(name: "email")
+  ownerName: String @col(name: "owner_name")
+  emailVerified: Boolean! @col(name: "email_verified") @default(expr: "false")
+  plan: PlanTier! @col(name: "plan") @default(expr: "'FREE'")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+
+  # Relations
+  bots: [Bot!]! @hasMany
+  chatMessages: [ChatMessage!]! @hasMany(foreignKey: "userId")
+  commandUsages: [CommandUsage!]! @hasMany(foreignKey: "userId")
+}
+
+# ─── Bot ────────────────────────────────────────────────────────────────────
+
+"""
+A user's WhatsApp bot instance managed by gifted-session-main.
+"""
+type Bot @table(name: "bots", singular: "bot", plural: "bots") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  userId: UUID! @col(name: "user_id") @ref(field: "user")
+  user: User!
+  sessionId: String! @col(name: "session_id") @unique
+  phone: String @col(name: "phone", dataType: "varchar(20)")
+  status: BotStatus! @col(name: "status") @default(expr: "'STOPPED'")
+  botName: String @col(name: "bot_name")
+  prefix: String @col(name: "prefix") @default(expr: "'.'")
+  mode: String @col(name: "mode") @default(expr: "'private'")
+  lastSyncDate: Timestamp @col(name: "last_sync_date")
+  commitHash: String @col(name: "commit_hash")
+  totalCommandsRun: Int! @col(name: "total_commands_run") @default(expr: "0")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+
+  # Relations
+  sessions: [BotSession!]! @hasMany
+  commandUsages: [CommandUsage!]! @hasMany
+}
+
+# ─── Bot Session ─────────────────────────────────────────────────────────────
+
+"""
+Stores encrypted WhatsApp session credentials blob.
+"""
+type BotSession @table(name: "bot_sessions", singular: "botSession", plural: "botSessions") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  botId: UUID! @col(name: "bot_id") @ref(field: "bot")
+  bot: Bot!
+  sessionData: String! @col(name: "session_data", dataType: "text")
+  isActive: Boolean! @col(name: "is_active") @default(expr: "true")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  expiresAt: Timestamp @col(name: "expires_at")
+}
+
+# ─── Chat Message ────────────────────────────────────────────────────────────
+
+"""
+Community chat messages stored in PostgreSQL.
+Polled by the frontend every 15 seconds using a lightweight ?mode=poll check.
+"""
+type ChatMessage @table(name: "chat_messages", singular: "chatMessage", plural: "chatMessages") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id") @ref(field: "user")
+  user: User
+  username: String! @col(name: "username", dataType: "varchar(30)")
+  message: String! @col(name: "message", dataType: "text")
+  deviceId: String @col(name: "device_id", dataType: "varchar(64)")
+  isSticker: Boolean! @col(name: "is_sticker") @default(expr: "false")
+  stickerUrl: String @col(name: "sticker_url")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─── Command ─────────────────────────────────────────────────────────────────
+
+"""
+Registered bot commands — synced from plugin files.
+"""
+type Command @table(name: "commands", singular: "command", plural: "commands") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  pattern: String! @col(name: "pattern", dataType: "varchar(80)") @unique
+  aliases: String @col(name: "aliases", dataType: "text")
+  description: String @col(name: "description", dataType: "text")
+  category: CommandCategory! @col(name: "category") @default(expr: "'GENERAL'")
+  isOwnerOnly: Boolean! @col(name: "is_owner_only") @default(expr: "false")
+  isGroupOnly: Boolean! @col(name: "is_group_only") @default(expr: "false")
+  isDisabled: Boolean! @col(name: "is_disabled") @default(expr: "false")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+
+  # Relations
+  usages: [CommandUsage!]! @hasMany
+}
+
+# ─── Command Usage (Analytics) ───────────────────────────────────────────────
+
+"""
+Logs every time a user's bot runs a command.
+Used for rate-limiting and analytics dashboards.
+"""
+type CommandUsage @table(name: "command_usages", singular: "commandUsage", plural: "commandUsages") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  commandId: UUID! @col(name: "command_id") @ref(field: "command")
+  command: Command!
+  botId: UUID! @col(name: "bot_id") @ref(field: "bot")
+  bot: Bot!
+  userId: UUID @col(name: "user_id") @ref(field: "user")
+  user: User
+  senderJid: String @col(name: "sender_jid", dataType: "varchar(50)")
+  groupJid: String @col(name: "group_jid", dataType: "varchar(50)")
+  executedAt: Timestamp! @col(name: "executed_at") @default(expr: "request.time")
+  durationMs: Int @col(name: "duration_ms")
+  success: Boolean! @col(name: "success") @default(expr: "true")
+  errorMessage: String @col(name: "error_message")
+}
+
+# ─── Media Asset ─────────────────────────────────────────────────────────────
+
+"""
+Tracks uploaded media files (CDN URLs, sizes, hashes).
+"""
+type MediaAsset @table(name: "media_assets", singular: "mediaAsset", plural: "mediaAssets") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  botId: UUID @col(name: "bot_id") @ref(field: "bot")
+  bot: Bot
+  url: String! @col(name: "url", dataType: "text")
+  cdnProvider: String @col(name: "cdn_provider", dataType: "varchar(30)")
+  mediaType: MediaType! @col(name: "media_type")
+  mimeType: String @col(name: "mime_type", dataType: "varchar(80)")
+  fileSizeBytes: Int @col(name: "file_size_bytes")
+  sha256: String @col(name: "sha256", dataType: "char(64)")
+  originalUrl: String @col(name: "original_url", dataType: "text")
+  uploadedAt: Timestamp! @col(name: "uploaded_at") @default(expr: "request.time")
+  expiresAt: Timestamp @col(name: "expires_at")
+}
+
+# ─── Download Request ────────────────────────────────────────────────────────
+
+"""
+Tracks each media download request (rate-limiting, analytics).
+"""
+type DownloadRequest @table(name: "download_requests", singular: "downloadRequest", plural: "downloadRequests") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  botId: UUID @col(name: "bot_id") @ref(field: "bot")
+  bot: Bot
+  platform: String! @col(name: "platform", dataType: "varchar(30)")
+  sourceUrl: String! @col(name: "source_url", dataType: "text")
+  resultUrl: String @col(name: "result_url", dataType: "text")
+  mediaType: MediaType @col(name: "media_type")
+  success: Boolean! @col(name: "success") @default(expr: "true")
+  errorMessage: String @col(name: "error_message")
+  requestedAt: Timestamp! @col(name: "requested_at") @default(expr: "request.time")
+  durationMs: Int @col(name: "duration_ms")
+}
+
+# ─── Server Health Snapshot ──────────────────────────────────────────────────
+
+"""
+Periodic health check snapshots from the session server's /health endpoint.
+Useful for uptime dashboards without a third-party service.
+"""
+type HealthSnapshot @table(name: "health_snapshots", singular: "healthSnapshot", plural: "healthSnapshots") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  connectedBots: Int! @col(name: "connected_bots")
+  uptimeSeconds: Float @col(name: "uptime_seconds")
+  heapUsedMb: Float @col(name: "heap_used_mb")
+  rssMb: Float @col(name: "rss_mb")
+  databaseStatus: String @col(name: "database_status", dataType: "varchar(20)")
+  redisStatus: String @col(name: "redis_status", dataType: "varchar(20)")
+  storageStatus: String @col(name: "storage_status", dataType: "varchar(20)")
+  recordedAt: Timestamp! @col(name: "recorded_at") @default(expr: "request.time")
+}
