@@ -162,67 +162,346 @@ gmd(
   },
 );
 
-gmd(
-  {
-    pattern: "createqr",
-    aliases: ["toqr", "qrcode", "makeqr"],
-    react: "📱",
-    category: "tools",
-    description: "Create a QR code from text or link",
-  },
-  async (from, Gifted, conText) => {
-    const {
-      mek,
-      reply,
-      react,
-      q,
-      quoted,
-      quotedMsg,
-      botFooter,
-      botName,
-      botPrefix,
-      GiftedTechApi,
-      GiftedApiKey,
-    } = conText;
-
-    let content = q?.trim();
-
-    if (!content && quotedMsg) {
-      content = quoted?.conversation || quoted?.extendedTextMessage?.text;
-    }
-
-    if (!content) {
-      await react("❌");
-      return reply(
-        `Please provide text or a link\n\nUsage: ${botPrefix}createqr Hello World\nOr quote a message`,
-      );
-    }
-
-    await react("⏳");
-
-    try {
-      const res = await axios.get(`${GiftedTechApi}/api/tools/createqr`, {
-        params: { apikey: GiftedApiKey, query: content },
-        responseType: "arraybuffer",
-      });
-
-      await Gifted.sendMessage(
-        from,
-        {
-          image: Buffer.from(res.data),
-          caption: `*${botName} QR CODE*\n\n📝 Content: ${content.substring(0, 100)}${content.length > 100 ? "..." : ""}\n\n> *${botFooter}*`,
-        },
-        { quoted: mek },
-      );
-
-      await react("✅");
-    } catch (e) {
-      console.error("Create QR error:", e);
-      await react("❌");
-      return reply("Failed to create QR code: " + e.message);
-    }
-  },
-);
+const emojis = ['💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '❤️‍', '🔥', '❤️‍', '🩹', '💯', '♨️', '💢', '💬', '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤', '🌐', '♠️', '♥️', '♦️', '♣️', '🃏', '🀄️', '🎴', '🎭️', '🔇', '🔈️', '🔉', '🔊', '🔔', '🔕', '🎼', '🎵', '🎶', '💹', '🏧', '🚮', '🚰', '♿️', '🚹️', '🚺️', '🚻', '🚼️', '🚾', '🛂', '🛃', '🛄', '🛅', '⚠️', '🚸', '⛔️', '🚫', '🚳', '🚭️', '🚯', '🚱', '🚷', '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔃', '🔄', '🔙', '🔚', '🔛', '🔜', '🔝', '🛐', '⚛️', '🕉️', '✡️', '☸️', '☯️', '✝️', '☦️', '☪️', '☮️', '🕎', '🔯', '♈️', '♉️', '♊️', '♋️', '♌️', '♍️', '♎️', '♏️', '♐️', '♑️', '♒️', '♓️', '⛎', '🔀', '🔁', '🔂', '▶️', '⏩️', '⏭️', '⏯️', '◀️', '⏪️', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '♀️', '♂️', '⚧', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓️', '❔', '❕', '❗️', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭕️', '✅', '☑️', '✔️', '❌', '❎', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '©️', '®️', '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡', '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒', '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗', '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶', '🈯️', '🉐', '🈹', '🈚️', '🈲', '🉑', '🈸', '🈴', '🈳', '㊗️', '㊙️', '🈺', '🈵', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫️', '⚪️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛️', '⬜️', '◼️', '◻️', '◾️', '◽️', '▪️', '▫️', '🔶', '🔷', '🔸', '🔹', '🔺', '🔻', '💠', '🔘', '🔳', '🔲', '🕛️', '🕧️', '🕐️', '🕜️', '🕑️', '🕝️', '🕒️', '🕞️', '🕓️', '🕟️', '🕔️', '🕠️', '🕕️', '🕡️', '🕖️', '🕢️', '🕗️', '🕣️', '🕘️', '🕤️', '🕙️', '🕥️', '🕚️', '🕦️', '*️', '#️', '0️', '1️', '2️', '3️', '4️', '5️', '6️', '7️', '8️', '9️', '🛎️', '🧳', '⌛️', '⏳️', '⌚️', '⏰', '⏱️', '⏲️', '🕰️', '🌡️', '🗺️', '🧭', '🎃', '🎄', '🧨', '🎈', '🎉', '🎊', '🎎', '🎏', '🎐', '🎀', '🎁', '🎗️', '🎟️', '🎫', '🔮', '🧿', '🎮️', '🕹️', '🎰', '🎲', '♟️', '🧩', '🧸', '🖼️', '🎨', '🧵', '🧶', '👓️', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🛍️', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓️', '🧢', '⛑️', '📿', '💄', '💍', '💎', '📢', '📣', '📯', '🎙️', '🎚️', '🎛️', '🎤', '🎧️', '📻️', '🎷', '🎸', '🎹', '🎺', '🎻', '🪕', '🥁', '📱', '📲', '☎️', '📞', '📟️', '📠', '🔋', '🔌', '💻️', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿️', '📀', '🧮', '🎥', '🎞️', '📽️', '🎬️', '📺️', '📷️', '📸', '📹️', '📼', '🔍️', '🔎', '🕯️', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚️', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰️', '💴', '💵', '💶', '💷', '💸', '💳️', '🧾', '✉️', '💌', '📧', '🧧', '📨', '📩', '📤️', '📥️', '📦️', '📫️', '📪️', '📬️', '📭️', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋️', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️', '🔒️', '🔓️', '🔏', '🔐', '🔑', '🗝️', '🔨', '🪓', '⛏️', '⚒️', '🛠️', '🗡️', '⚔️', '💣️', '🏹', '🛡️', '🔧', '🔩', '⚙️', '🗜️', '⚖️', '🦯', '🔗', '⛓️', '🧰', '🧲', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🚪', '🛏️', '🛋️', '🪑', '🚽', '🚿', '🛁', '🪒', '🧴', '🧷', '🧹', '🧺', '🧻', '🧼', '🧽', '🧯', '🛒', '🚬', '⚰️', '⚱️', '🏺', '🕳️', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏟️', '🏛️', '🏗️', '🧱', '🏘️', '🏚️', '🏠️', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭️', '🏯', '🏰', '💒', '🗼', '🗽', '⛪️', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲️', '⛺️', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌇', '🌉', '🗾', '🏞️', '🎠', '🎡', '🎢', '💈', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇️', '🚈', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍️', '🚎', '🚐', '🚑️', '🚒', '🚓', '🚔️', '🚕', '🚖', '🚗', '🚘️', '🚙', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🦽', '🦼', '🛺', '🚲️', '🛴', '🛹', '🚏', '🛣️', '🛤️', '🛢️', '⛽️', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓️', '⛵️', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', ' \%)$.forEach((f, i) => {
+452:           txt += `*${i + 1}. ${r.name}*\n${r.result}\n\n`;
+453:         });
+454:         txt += `\n💡 Use ${botPrefix}fancy<number> to copy specific style\nExample: ${botPrefix}fancy5 ${text}\n\n> *${botFooter}*`;
+455: 
+456:         await reply(txt);
+457:       }
+458: 
+459:       await react("✅");
+460:     } catch (e) {
+461:       console.error("Fancy text error:", e);
+462:       await react("❌");
+463:       return reply("Failed to generate fancy text: " + e.message);
+464:     }
+465:   },
+466: );
+467: 
+468: gmd(
+469:   {
+470:     pattern: "define",
+471:     aliases: ["meaning", "urban", "dictionary"],
+472:     react: "📖",
+473:     category: "tools",
+474:     description: "Get the meaning/definition of a word",
+475:   },
+476:   async (from, Gifted, conText) => {
+477:     const { reply, react, q, botFooter, botName, botPrefix, GiftedTechApi, GiftedApiKey } =
+478:       conText;
+479: 
+480:     const term = q?.trim();
+481:     if (!term) {
+482:       await react("❌");
+483:       return reply(`Please provide a word to define\n\nUsage: ${botPrefix}define hello`);
+484:     }
+485: 
+486:     await react("⏳");
+487: 
+488:     try {
+489:       const res = await axios.get(`${GiftedTechApi}/api/tools/define`, {
+490:         params: { apikey: GiftedApiKey, term: term },
+491:       });
+492: 
+493:       if (!res.data?.success || !res.data?.results?.length) {
+494:         await react("❌");
+495:         return reply("No definitions found for: " + term);
+496:       }
+497: 
+498:       const definitions = res.data.results.slice(0, 5);
+499: 
+500:       let txt = `*${botName} DICTIONARY*\n\n`;
+501:       txt += `📖 *Word:* ${term}\n\n`;
+502: 
+503:       definitions.forEach((def, i) => {
+504:         const cleanDef = def.definition.replace(/\[([^\]]+)\]/g, "$1");
+505:         const cleanExample = def.example?.replace(/\[([^\]]+)\]/g, "$1");
+506:         txt += `*${i + 1}. ${def.word}*\n`;
+507:         txt += `📝 ${cleanDef}\n`;
+508:         if (cleanExample) txt += `💬 _"${cleanExample}"_\n`;
+509:         txt += `👤 by ${def.author}\n\n`;
+510:       });
+511: 
+512:       txt += `> *${botFooter}*`;
+513: 
+514:       await reply(txt);
+515:       await react("✅");
+516:     } catch (e) {
+517:       console.error("Define error:", e);
+518:       await react("❌");
+519:       return reply("Failed to get definition: " + e.message);
+520:     }
+521:   },
+522: );
+523: 
+524: gmd(
+525:   {
+526:     pattern: "web2zip",
+527:     aliases: ["webtozip", "webdl", "dlweb", "downloadweb"],
+528:     react: "📦",
+529:     category: "tools",
+530:     description: "Download a website as a ZIP file",
+531:   },
+532:   async (from, Gifted, conText) => {
+533:     const {
+534:       mek,
+535:       reply,
+536:       react,
+537:       q,
+538:       botFooter,
+539:       botName,
+540:       botPrefix,
+541:       GiftedTechApi,
+542:       GiftedApiKey,
+543:     } = conText;
+544: 
+545:     const url = q?.trim();
+546:     if (!url) {
+547:       await react("❌");
+548:       return reply(
+549:         `Please provide a URL\n\nUsage: ${botPrefix}web2zip https://example.com`,
+550:       );
+551:     }
+552: 
+553:     await react("⏳");
+554: 
+555:     try {
+556:       const res = await axios.get(`${GiftedTechApi}/api/tools/web2zip`, {
+557:         params: { apikey: GiftedApiKey, url: url },
+558:         responseType: "arraybuffer",
+559:       });
+560: 
+561:       let domain;
+562:       try {
+563:         domain = new URL(url).hostname.replace(/[^a-z0-9]/gi, "_");
+564:       } catch {
+565:         domain = "website";
+566:       }
+567: 
+568:       await Gifted.sendMessage(
+569:         from,
+570:         {
+571:           document: Buffer.from(res.data),
+572:           mimetype: "application/zip",
+573:           fileName: `${domain}.zip`,
+574:           caption: `*${botName} WEB2ZIP*\n\n🌐 ${url}\n\n> *${botFooter}*`,
+575:         },
+576:         { quoted: mek },
+577:       );
+578: 
+579:       await react("✅");
+580:     } catch (e) {
+581:       console.error("Web2zip error:", e);
+582:       await react("❌");
+583:       return reply("Failed to download website: " + e.message);
+584:     }
+585:   },
+586: );
+587: 
+588: gmd(
+589:   {
+590:     pattern: "emojimix",
+591:     aliases: ["emomix", "mixemoji"],
+592:     react: "😀",
+593:     category: "tools",
+594:     description: "Mix two emojis together",
+595:   },
+596:   async (from, Gifted, conText) => {
+597:     const {
+598:       mek,
+599:       reply,
+600:       react,
+601:       q,
+602:       botFooter,
+603:       botName,
+604:       botPrefix,
+605:       GiftedTechApi,
+606:       GiftedApiKey,
+607:     } = conText;
+608: 
+609:     const input = q?.trim();
+610:     if (!input) {
+611:       await react("❌");
+612:       return reply(
+613:         `Please provide two emojis\n\nUsage: ${botPrefix}emojimix 😂:🙄\nOr: ${botPrefix}emojimix 😂🙄`,
+614:       );
+615:     }
+616: 
+617:     let emoji1, emoji2;
+618: 
+619:     if (input.includes(":")) {
+620:       const parts = input.split(":");
+621:       emoji1 = parts[0].trim();
+622:       emoji2 = parts[1].trim();
+623:     } else {
+624:       const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
+625:       const emojis = input.match(emojiRegex);
+626:       if (emojis && emojis.length >= 2) {
+627:         emoji1 = emojis[0];
+628:         emoji2 = emojis[1];
+629:       }
+630:     }
+631: 
+632:     if (!emoji1 || !emoji2) {
+633:       await react("❌");
+634:       return reply(`Please provide two valid emojis\n\nUsage: ${botPrefix}emojimix 😂:🙄`);
+635:     }
+636: 
+637:     await react("⏳");
+638: 
+639:     try {
+640:       const res = await axios.get(`${GiftedTechApi}/api/tools/emojimix`, {
+641:         params: { apikey: GiftedApiKey, emoji1: emoji1, emoji2: emoji2 },
+642:         responseType: "arraybuffer",
+643:       });
+644: 
+645:       await Gifted.sendMessage(
+646:         from,
+647:         {
+648:           image: Buffer.from(res.data),
+649:           caption: `*${botName} EMOJI MIX*\n\n${emoji1} + ${emoji2}\n\n> *${botFooter}*`,
+650:         },
+651:         { quoted: mek },
+652:       );
+653: 
+654:       await react("✅");
+655:     } catch (e) {
+656:       console.error("Emoji mix error:", e);
+657:       await react("❌");
+658:       return reply(
+659:         "Failed to mix emojis. Make sure both emojis are valid and supported.",
+660:       );
+661:     }
+662:   },
+663: );
+664: 
+665: gmd(
+666:   {
+667:     pattern: "rename",
+668:     aliases: ["newname", "renamefile", "rn"],
+669:     react: "📝",
+670:     category: "tools",
+671:     description: "Rename a quoted document/file with a new name",
+672:   },
+673:   async (from, Gifted, conText) => {
+674:     const {
+675:       mek,
+676:       reply,
+677:       react,
+678:       q,
+679:       quoted,
+680:       quotedMsg,
+681:       getMediaBuffer,
+682:       getFileContentType,
+683:       botPrefix,
+684:     } = conText;
+685: 
+686:     if (!quotedMsg) {
+687:       await react("❌");
+688:       return reply(`Please quote/reply to a document or media file\n\nUsage: ${botPrefix}rename <new filename>`);
+689:     }
+690: 
+700:       } else if (quotedMsg.stickerMessage) {
+701:         mediaMsg = quotedMsg.stickerMessage;
+702:         mediaType = "sticker";
+703:         originalMime = "image/webp";
+704:         originalExt = ".webp";
+705:       } else {
+706:         await react("❌");
+707:         return reply("❌ Please quote a document, image, video, audio, or sticker file.");
+708:       }
+709: 
+710:       const buffer = await getMediaBuffer(mediaMsg, mediaType);
+711: 
+712:       let finalName = newName;
+713:       if (!finalName.includes(".") && originalExt) {
+714:         finalName = newName + originalExt;
+715:       }
+716: 
+717:       await Gifted.sendMessage(
+718:         from,
+719:         {
+720:           document: buffer,
+721:           fileName: finalName,
+722:           mimetype: originalMime,
+723:         },
+724:         { quoted: mek }
+725:       );
+726: 
+727:       await react("✅");
+728:     } catch (e) {
+729:       console.error("Rename error:", e);
+730:       await react("❌");
+731:       return reply("Failed to rename file: " + e.message);
+732:     }
+733:   },
+734: );
+735: 
+736: // Local QR code generator using qrcode package
+737: const QRCode = require("qrcode");
+738: 
+739: // Replaced the axios call in createqr to work offline / locally
+740: gmd(
+741:   {
+742:     pattern: "createqr",
+743:     aliases: ["toqr", "qrcode", "makeqr"],
+744:     react: "📱",
+745:     category: "tools",
+746:     description: "Create a QR code from text or link",
+747:   },
+748:   async (from, Gifted, conText) => {
+749:     const {
+750:       mek,
+751:       reply,
+752:       react,
+753:       q,
+754:       quoted,
+755:       quotedMsg,
+756:       botFooter,
+757:       botName,
+758:       botPrefix,
+759:     } = conText;
+760: 
+761:     let content = q?.trim();
+762: 
+763:     if (!content && quotedMsg) {
+764:       content = quoted?.conversation || quoted?.extendedTextMessage?.text;
+765:     }
+766: 
+767:     if (!content) {
+768:       await react("❌");
+769:       return reply(
+770:         `Please provide text or a link\n\nUsage: ${botPrefix}createqr Hello World\nOr quote a message`,
+771:       );
+772:     }
+773: 
+774:     await react("⏳");
+775: 
+776:     try {
+777:       const qrBuffer = await QRCode.toBuffer(content, {
+778:         type: 'png',
+779:         margin: 2,
+780:         scale: 8
+781:       });
+782: 
+783:       await Gifted.sendMessage(
+784:         from,
+785:         {
+786:           image: qrBuffer,
+787:           caption: `*${botName} QR CODE*\n\n📝 Content: ${content.substring(0, 100)}${content.length > 100 ? "..." : ""}\n\n> *${botFooter}*`,
+788:         },
+789:         { quoted: mek },
+790:       );
+791: 
+792:       await react("✅");
+793:     } catch (e) {
+794:       console.error("Create QR error:", e);
+795:       await react("❌");
+796:       return reply("Failed to create QR code: " + e.message);
+797:     }
+798:   },
+799: );
 
 gmd(
   {

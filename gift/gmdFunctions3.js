@@ -157,44 +157,54 @@ function getFileContentType(ext) {
 
 
 async function uploadToGithubCdn(buffer, filename) {
-    const form = new FormData();
-    const stream = bufferToStream(buffer);
-    
-    form.append('file', stream, {
-        filename: filename,
-        contentType: getFileContentType(path.extname(filename))
-    });
+    try {
+        const form = new FormData();
+        const stream = bufferToStream(buffer);
+        
+        form.append('file', stream, {
+            filename: filename,
+            contentType: getFileContentType(path.extname(filename))
+        });
 
-    const { data } = await axios.post('https://ghbcdn.bot.connect.dekut.org/api/upload.php', form, {
-        headers: form.getHeaders(),
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity
-    });
+        const { data } = await axios.post('https://ghbcdn.bot.connect.dekut.org/api/upload.php', form, {
+            headers: form.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
 
-    return { url: data.rawUrl || data };
+        return { url: data.rawUrl || data };
+    } catch (err) {
+        console.warn("⚠️ GitHub CDN Upload failed, falling back to Catbox:", err.message);
+        return await uploadToCatbox(buffer, filename);
+    }
 }
 
 
 async function uploadToGiftedCdn(buffer, filename, deleteKey = '') {
-    const form = new FormData();
-    const stream = bufferToStream(buffer);
-    
-    form.append('file', stream, {
-        filename: filename,
-        contentType: getFileContentType(path.extname(filename))
-    });
-    
-    if (deleteKey) {
-        form.append('deleteKey', deleteKey);
+    try {
+        const form = new FormData();
+        const stream = bufferToStream(buffer);
+        
+        form.append('file', stream, {
+            filename: filename,
+            contentType: getFileContentType(path.extname(filename))
+        });
+        
+        if (deleteKey) {
+            form.append('deleteKey', deleteKey);
+        }
+
+        const { data } = await axios.post('https://cdn.bot.connect.dekut.org/api/upload.php', form, {
+            headers: form.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
+
+        return { url: data.url || data };
+    } catch (err) {
+        console.warn("⚠️ Gifted CDN Upload failed, falling back to Catbox:", err.message);
+        return await uploadToCatbox(buffer, filename);
     }
-
-    const { data } = await axios.post('https://cdn.bot.connect.dekut.org/api/upload.php', form, {
-        headers: form.getHeaders(),
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity
-    });
-
-    return { url: data.url || data };
 }
 
 

@@ -31,7 +31,8 @@ const filesToUpload = [
 const dirsToUpload = [
     'gift',
     'gifted-session-main',
-    'gifted-baileys-main'
+    'gifted-baileys-main',
+    'dekutconnect'
 ];
 
 function isDirLocal(p) {

@@ -448,7 +448,7 @@ async function loadSession() {
 
         // If not raw gzip data, fetch from session server
         if (!b64data.startsWith('H4sI')) {
-            const serverUrl = `${config.SESSION_SERVER_URL || 'https://session.bot.connect.dekut.org'}/session/${b64data}`;
+            const serverUrl = `${config.SESSION_SERVER_URL || 'https://dekutconnect-wa-bot.vercel.app'}/session/${b64data}`;
             const res = await axios.get(serverUrl, { timeout: 15000 });
             const fetched = (res.data || '').toString().trim();
             // Server may return with any prefix or raw
